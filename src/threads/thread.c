@@ -24,6 +24,12 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of processes in THREAD_BLOCKED state. */
+static struct list sleep_list;
+
+/* Minimum wakeup_ticks among threads in sleep_list */
+int64_t next_tick_to_awake;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -92,6 +98,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -582,3 +589,26 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+/* Change current thread into THREAD_BLOCKED 
+and insert it into sleep list */
+void thread_sleep(int64_t ticks)
+{
+  struct thread *cur = running_thread ();
+  if (cur != idle_thread)
+  {
+    enum intr_level old_level = intr_disable ();
+    cur->status = THREAD_BLOCKED;
+    cur->wakeup_tick = ticks;
+    list_push_back (&sleep_list, &(cur->elem));
+    update_next_tick_to_awake (ticks);
+    schedule ();
+    intr_set_level (old_level);
+  }
+}
+
+/* change to the minimum awake_ticks among thread */
+void update_next_tick_to_awake (int64_t ticks) 
+{
+  next_tick_to_awake = ticks < next_tick_to_awake ? ticks : next_tick_to_awake;
+}
