@@ -28,7 +28,7 @@ static struct list ready_list;
 static struct list sleep_list;
 
 /* Minimum wakeup_ticks among threads in sleep_list */
-int64_t next_tick_to_awake;
+int64_t next_tick_to_awake = INT64_MAX;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -306,7 +306,7 @@ thread_exit (void)
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
-thread_yield (void) 
+ thread_yield (void) 
 {
   struct thread *cur = thread_current ();
   enum intr_level old_level;
@@ -594,21 +594,50 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 and insert it into sleep list */
 void thread_sleep(int64_t ticks)
 {
+  enum intr_level old_level = intr_disable ();
   struct thread *cur = running_thread ();
   if (cur != idle_thread)
   {
-    enum intr_level old_level = intr_disable ();
-    cur->status = THREAD_BLOCKED;
     cur->wakeup_tick = ticks;
-    list_push_back (&sleep_list, &(cur->elem));
     update_next_tick_to_awake (ticks);
-    schedule ();
-    intr_set_level (old_level);
+    list_push_back (&sleep_list, &(cur->elem));
+    thread_block ();
   }
+  intr_set_level (old_level);
+}
+
+/* Check whether there exist a thread to be awaken. 
+   If exists then awake it */
+void thread_awake(int64_t ticks)
+{
+  struct list_elem *e;
+  for (e = list_begin (&sleep_list); e != list_end (&sleep_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+      if (t->wakeup_tick <= ticks)
+      {
+        t->wakeup_tick = INT64_MAX;
+        e = list_remove (&(t->elem));
+        thread_unblock (t);
+        e = list_prev(e);
+      }
+      else
+      {
+        update_next_tick_to_awake (t->wakeup_tick);
+      }
+    }
 }
 
 /* change to the minimum awake_ticks among thread */
 void update_next_tick_to_awake (int64_t ticks) 
 {
-  next_tick_to_awake = ticks < next_tick_to_awake ? ticks : next_tick_to_awake;
+  next_tick_to_awake = (next_tick_to_awake > ticks) ? ticks : next_tick_to_awake;
 }
+
+/* returns the next ticks to awake */
+int64_t get_next_tick_to_awake ()
+{
+  return next_tick_to_awake;
+}
+
