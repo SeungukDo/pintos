@@ -201,6 +201,10 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if(priority > thread_current()->priority){
+    thread_yield();
+  }
+
   return tid;
 }
 
@@ -237,7 +241,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, priority_compare, NULL);
+  //list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -307,8 +312,10 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  if (cur != idle_thread) {
+    list_insert_ordered(&ready_list, &cur->elem, priority_compare, NULL);
+  }
+    //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -336,6 +343,8 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  
+  max_pri();
 }
 
 /* Returns the current thread's priority. */
@@ -375,6 +384,59 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
+
+void max_pri(){
+  if(!list_empty(&ready_list)){
+    if(thread_current()->priority <
+    list_entry(list_front(&ready_list), struct thread, elem)->priority){
+      thread_yield();
+    }
+  }
+}
+
+bool priority_compare(const struct list_elem* a,
+                  const struct list_elem* b, void* aux UNUSED){
+  return list_entry(a, struct thread, elem)->priority >
+  list_entry(b, struct thread, elem)->priority;
+  }
+
+void priority_donation(){
+  struct thread* t = thread_current();
+  struct lock* l = t->wanted_lock;
+  int k = list_size(&thread_current()->wanted_lock->semaphore.waiters);
+  
+  for(int i = 0; i < 8; i++){
+    if(!l->holder)
+      return;
+    if(l->holder->priority >= t->priority)
+      return;
+    
+    l->holder->priority = t->priority;
+    t = l->holder;
+    l = t->wanted_lock;
+  }
+  
+}
+void remove_with_lock(struct lock *lock){
+  struct list_elem* e = list_front(&thread_current()->donate_list);
+  struct list_elem* next;
+
+  while(e != list_back(&thread_current()->donate_list)){
+    struct thread* t = list_entry(e, struct thread, elem);
+    next = list_next(e);
+
+    if(t->wanted_lock == lock){
+      list_remove(e);
+    }
+
+    e=next;
+  }
+}
+void resort_ready(){
+  list_sort(&ready_list, cmp_priority, NULL);
+
+}
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
