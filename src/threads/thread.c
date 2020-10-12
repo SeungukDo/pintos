@@ -400,43 +400,6 @@ bool priority_compare(const struct list_elem* a,
   list_entry(b, struct thread, elem)->priority;
   }
 
-void priority_donation(){
-  struct thread* t = thread_current();
-  struct lock* l = t->wanted_lock;
-  int k = list_size(&thread_current()->wanted_lock->semaphore.waiters);
-  
-  for(int i = 0; i < 8; i++){
-    if(!l->holder)
-      return;
-    if(l->holder->priority >= t->priority)
-      return;
-    
-    l->holder->priority = t->priority;
-    t = l->holder;
-    l = t->wanted_lock;
-  }
-  
-}
-void remove_with_lock(struct lock *lock){
-  struct list_elem* e = list_front(&thread_current()->donate_list);
-  struct list_elem* next;
-
-  while(e != list_back(&thread_current()->donate_list)){
-    struct thread* t = list_entry(e, struct thread, elem);
-    next = list_next(e);
-
-    if(t->wanted_lock == lock){
-      list_remove(e);
-    }
-
-    e=next;
-  }
-}
-void resort_ready(){
-  list_sort(&ready_list, priority_compare, NULL);
-
-}
-
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
