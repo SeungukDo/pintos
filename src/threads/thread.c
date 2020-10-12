@@ -433,7 +433,7 @@ void remove_with_lock(struct lock *lock){
   }
 }
 void resort_ready(){
-  list_sort(&ready_list, cmp_priority, NULL);
+  list_sort(&ready_list, priority_compare, NULL);
 
 }
 
