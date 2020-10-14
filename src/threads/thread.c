@@ -431,9 +431,8 @@ void thread_set_nice(int nice UNUSED)
   old_level = intr_disable();
   struct thread *t = thread_current();
   t->nice = nice;
+  mlfqs_recent_cpu(t);
   mlfqs_priority(t);
-  printf("hello status:%d\n", t->status);
-  schedule();
   intr_set_level(old_level);
 }
 
