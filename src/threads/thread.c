@@ -397,7 +397,13 @@ void mlfqs_priority_all(void)
 void mlfqs_recent_cpu(struct thread *t)
 {
   if (t != idle_thread)
-    t->recent_cpu = add_mixed(mult_fp(div_fp(mult_mixed(load_avg, 2), add_mixed(mult_mixed(load_avg, 2), 1)), t->recent_cpu), t->nice);
+  {
+    int load = load_avg * 2;
+    int recent_cpu = div_fp(load, add_mixed(load, 1));
+    recent_cpu = mult_fp(recent_cpu, t->recent_cpu);
+    recent_cpu = add_mixed(recent_cpu, t->nice);
+    t->recent_cpu = recent_cpu;
+  }
 }
 
 /* compute load_avg */
@@ -422,7 +428,7 @@ void mlfqs_increment(void)
 {
   struct thread *t = thread_current();
   if (t != idle_thread)
-    t->recent_cpu += 1;
+    t->recent_cpu = add_mixed(t->recent_cpu, 1);
 }
 
 /* recalculate recent_cpu and priority of all threads */
@@ -448,6 +454,7 @@ void thread_set_nice(int nice UNUSED)
   t->nice = nice;
   mlfqs_recent_cpu(t);
   mlfqs_priority(t);
+  resort_ready();
   intr_set_level(old_level);
 }
 
@@ -622,8 +629,14 @@ init_thread(struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *)t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  t->nice = NICE_DEFAULT;
-  t->recent_cpu = RECENT_CPU_DEFAULT;
+  if (thread_mlfqs)
+  {
+    t->nice = NICE_DEFAULT; /* NICE_DEFAULT should be zero */
+    if (t == initial_thread)
+      t->recent_cpu = RECENT_CPU_DEFAULT;
+    else
+      t->recent_cpu = thread_get_recent_cpu ();
+  }
 
   t->original_pri = priority;
   t->howmanydon = 0;
