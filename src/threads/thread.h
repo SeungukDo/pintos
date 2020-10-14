@@ -90,6 +90,8 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    int original_pri;
+    int howmanydon;
     struct list donate_list;
     struct lock *wanted_lock;
     struct list_elem donation_elem;
@@ -142,8 +144,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void max_pri();
 bool priority_compare(const struct list_elem* a,
                   const struct list_elem* b, void* aux UNUSED);
+void resort_ready();
+void donate();
+void remove_donation(struct lock* lock);
 
 #endif /* threads/thread.h */

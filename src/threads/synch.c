@@ -182,6 +182,7 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  lock->received=false;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -199,8 +200,23 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  if(!thread_mlfqs){
+    if(lock->holder!=NULL){
+      thread_current()->wanted_lock = lock;
+      if(lock->holder->priority < thread_get_priority()){
+        donate();
+        if(!lock->received){
+          lock->holder->howmanydon++;
+        }
+        lock->received=true;
+        resort_ready();
+      }
+    }
+  }
+
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  thread_current()->wanted_lock=NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -233,8 +249,12 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  if(!thread_mlfqs){
+    remove_donation(lock);
+  }
 
-  lock->holder = NULL;
+  lock->holder=NULL;
+
   sema_up (&lock->semaphore);
 }
 
@@ -319,10 +339,11 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters)) 
+  if (!list_empty (&cond->waiters)) {
     list_sort(&cond->waiters, priority_compare_sema, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
+  }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
