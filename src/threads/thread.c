@@ -455,6 +455,7 @@ void thread_set_nice(int nice UNUSED)
   mlfqs_recent_cpu(t);
   mlfqs_priority(t);
   resort_ready();
+  thread_yield();
   intr_set_level(old_level);
 }
 
