@@ -7,7 +7,14 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+<<<<<<< HEAD
 
+=======
+#include <list.h>
+
+
+  
+>>>>>>> Yujin
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -20,6 +27,12 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
+/* for project 1 */
+static struct list sleeping_list;
+
+extern struct list* pready_list;
+extern struct list* pall_list;
+extern bool thread_mlfqs;
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -34,8 +47,15 @@ static void real_time_delay(int64_t num, int32_t denom);
    and registers the corresponding interrupt. */
 void timer_init(void)
 {
+<<<<<<< HEAD
   pit_configure_channel(0, 2, TIMER_FREQ);
   intr_register_ext(0x20, timer_interrupt, "8254 Timer");
+=======
+  pit_configure_channel (0, 2, TIMER_FREQ);
+  intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init (&sleeping_list);
+
+>>>>>>> Yujin
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -86,11 +106,22 @@ timer_elapsed(int64_t then)
    be turned on. */
 void timer_sleep(int64_t ticks)
 {
+<<<<<<< HEAD
   int64_t start = timer_ticks();
 
   ASSERT(intr_get_level() == INTR_ON);
 
   thread_sleep(ticks + start);
+=======
+  int64_t start = timer_ticks ();
+  struct thread *cur = thread_current ();
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  cur->alarm_time = start + ticks;
+  list_insert_ordered(&sleeping_list, &cur->elem, thread_less_func, 0);
+  thread_block();
+  intr_set_level (old_level);
+>>>>>>> Yujin
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -157,10 +188,20 @@ void timer_print_stats(void)
 }
 
 /* Timer interrupt handler. */
+
+bool thread_less_func(struct list_elem *a, struct list_elem *b, void *aux UNUSED) {
+
+  return list_entry(a,struct thread,elem)->alarm_time <
+
+         list_entry(b,struct thread,elem)->alarm_time;
+
+}
+
 static void
 timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
+<<<<<<< HEAD
   thread_tick();
   thread_awake(ticks);
 
@@ -176,6 +217,47 @@ timer_interrupt(struct intr_frame *args UNUSED)
     {
       mlfqs_priority_all();
     }
+=======
+  thread_tick ();
+  struct list_elem *e;
+
+  if(thread_mlfqs){
+    if(strcmp(thread_current()->name, "idle")!=0){
+      thread_current()->recent_cpu = add_f_i(thread_current()->recent_cpu, 1);
+    }
+    if(timer_ticks () % TIMER_FREQ==0){
+      set_mlfqs_load_avg();
+      for (e = list_begin(pall_list); e != list_end(pall_list); e = list_next (e)){
+          if(strcmp(list_entry(e, struct thread, allelem)->name, "idle")!=0){
+            set_mlfqs_recent_cpu(list_entry(e, struct thread, allelem));
+          }
+        }
+    }
+    if(timer_ticks () % 4 == 0){
+      for (e = list_begin(pall_list); e != list_end(pall_list); e = list_next (e)){
+        if(strcmp(list_entry(e, struct thread, allelem)->name, "idle")!=0){
+          set_mlfqs_priority(list_entry(e, struct thread, allelem));
+        }
+      }
+      list_sort(pready_list, priority_greater_func, 0);
+    }  
+  }
+  
+
+  while(1){
+    if(!list_empty (&sleeping_list)){
+      struct thread *head = list_entry(list_front(&sleeping_list), struct thread,elem);
+      if(head->alarm_time <= ticks){
+        list_pop_front(&sleeping_list);
+        thread_unblock(head);
+      }else {
+        break;
+      }
+    }else {
+      break; 
+    }
+    
+>>>>>>> Yujin
   }
 }
 

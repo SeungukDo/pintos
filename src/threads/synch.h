@@ -10,7 +10,11 @@ struct semaphore
     unsigned value;             /* Current value. */
     struct list waiters;        /* List of waiting threads. */
   };
-
+struct semaphore_elem 
+  {
+    struct list_elem elem;              /* List element. */
+    struct semaphore semaphore;         /* This semaphore. */
+  };
 void sema_init (struct semaphore *, unsigned value);
 void sema_down (struct semaphore *);
 bool sema_try_down (struct semaphore *);
@@ -22,7 +26,7 @@ struct lock
   {
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
-    bool received;
+    struct list_elem elem;
   };
 
 void lock_init (struct lock *);
@@ -30,8 +34,6 @@ void lock_acquire (struct lock *);
 bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
-bool priority_compare_sema(struct list_elem *a, struct list_elem *b, void* aux);
-
 
 /* Condition variable. */
 struct condition 
