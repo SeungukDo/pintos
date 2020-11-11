@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler(struct intr_frame *f UNUSED);
 
@@ -23,18 +24,15 @@ syscall_handler(struct intr_frame *f UNUSED)
   switch (number)
   {
   case SYS_HALT:
-    //printf("SYS HALT");
     halt();
     break;
   case SYS_EXIT:
     check_address(esp + 4);
     exit(*(uint32_t *)(esp + 4));
-    //printf("SYS_EXIT");
     break;
   case SYS_EXEC:
     check_address(esp + 4);
     f->eax = exec((const char *)*(uint32_t *)(esp + 4));
-    //printf("SYS_EXEC");
     break;
   case SYS_WAIT:
     check_address(esp + 4);
@@ -245,9 +243,12 @@ void close (int fd) {
 
 void check_address(void *addr)
 {
-  return;
-  if (!is_user_vaddr(addr))
+  if (addr >= 0xc0000000 || addr <= 0x8048000)
   {
     exit(-1);
+  }
+  else
+  {
+    return;
   }
 }
