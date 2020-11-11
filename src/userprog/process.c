@@ -58,17 +58,70 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  char *parse[LOADER_ARGS_LEN/2 + 1];
+  char *token;
+  char *save_ptr;
+  int arg_num = 0, cnt = 0, arg_0;
+
+  for(token = strtok_r(file_name, " ", &save_ptr); token!=NULL;
+      token=strtok_r(NULL, " ", &save_ptr)){
+    parse[arg_num] = token;
+    arg_num++;
+  }
+
+  int arg[arg_num];
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (parse[0], &if_.eip, &if_.esp);
+
+  if(success){
+    if(parse != NULL){
+      for(int i = arg_num - 1; i >= 0; i--){
+        for(int j = strlen(parse[i]); j >= 0; j--){
+          cnt++;
+          if_.esp--;
+          *(char*)if_.esp = parse[i][j];
+        }
+        arg[i] = (unsigned int)if_.esp;
+      }
+
+      for(int i = 0; i < 4-(cnt%4); i++){
+        if_.esp--;
+        *(char*)if_.esp = 0;
+      }
+
+      if_.esp -= 4;
+      *(char**)if_.esp = 0;
+
+      for(int i = arg_num - 1; i >= 0; i--){
+        if_.esp -= 4;
+        *(char**)if_.esp = (char*)arg[i];
+      }
+
+      arg_0 = (unsigned int)if_.esp;
+      if_.esp -= 4;
+      *(char**)if_.esp = (char*)arg_0;
+
+      if_.esp -= 4;
+      *(int*)if_.esp = arg_num;
+
+      if_.esp -= 4;
+      *(int*)if_.esp = 0;
+
+      hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+    }
+  }
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
+
+  
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
