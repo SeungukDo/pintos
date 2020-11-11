@@ -112,14 +112,9 @@ struct thread
    int recent_cpu;
 
 #ifdef USERPROG
-<<<<<<< HEAD
-   /* Owned by userprog/process.c. */
-   uint32_t *pagedir; /* Page directory. */
-=======
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     struct file* fd[128];
->>>>>>> Yujin
 #endif
 
    /* Owned by thread.c. */
