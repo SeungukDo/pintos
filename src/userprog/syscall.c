@@ -19,7 +19,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 {
   void *esp = f->esp;
   int number = *(int *)esp;
-  printf("syscall %d\n", number);
+  check_address((void *)esp);
   switch (number)
   {
   case SYS_HALT:
@@ -33,12 +33,12 @@ syscall_handler(struct intr_frame *f UNUSED)
     break;
   case SYS_EXEC:
     check_address(esp + 4);
-    exec((const char *)*(uint32_t *)(esp + 4));
+    f->eax = exec((const char *)*(uint32_t *)(esp + 4));
     //printf("SYS_EXEC");
     break;
   case SYS_WAIT:
     check_address(esp + 4);
-    wait((pid_t) * (uint32_t *)(esp + 4));
+    f->eax = wait((pid_t) * (uint32_t *)(esp + 4));
     //printf("SYS_WAIT");
     break;
   case SYS_CREATE:
@@ -54,17 +54,15 @@ syscall_handler(struct intr_frame *f UNUSED)
     //printf("SYS_FILESIZE");
     break;
   case SYS_READ:
-    //check_address(esp + 20);
-    //check_address(esp + 24);
-    //check_address(esp + 28);
-    //read((int)*(uint32_t *)(esp + 20), (void *)*(uint32_t *)(esp + 24), (unsigned)*((uint32_t *)(esp + 28)));
-    //printf("SYS_READ");
+    check_address(esp + 4);
+    check_address(esp + 8);
+    check_address(esp + 12);
+    read((int)*(uint32_t *)(esp + 4), (void *)*(uint32_t *)(esp + 8), (unsigned)*((uint32_t *)(esp + 12)));
     break;
   case SYS_WRITE:
-    hex_dump(f->esp, f->esp, 100, 1);
-    write((int)*(uint32_t *)(esp+4), 
-    (void *)*(uint32_t *)(f->esp + 8), 
-    (unsigned)*((uint32_t *)(f->esp + 12)));
+    write((int)*(uint32_t *)(esp + 4),
+          (void *)*(uint32_t *)(f->esp + 8),
+          (unsigned)*((uint32_t *)(f->esp + 12)));
     //printf("SYS_WRITE");
     break;
   case SYS_SEEK:
@@ -89,7 +87,7 @@ void halt(void)
 
 void exit(int status)
 {
-	printf("%s: exit(%d)\n", thread_current()->name, status);
+  printf("%s: exit(%d)\n", thread_current()->name, status);
   thread_current()->exit_status = status;
   thread_exit();
 }
@@ -97,19 +95,21 @@ void exit(int status)
 pid_t exec(const char *cmd_line)
 {
   pid_t pid = process_execute(cmd_line);
-  struct thread* child;
+  struct thread *child;
 
-  struct list_elem* elem;
-  for(elem = list_begin(&thread_current()->child_list);
-      elem != list_end(&thread_current()->child_list);
-      elem = list_next(elem)){
+  struct list_elem *elem;
+  for (elem = list_begin(&thread_current()->child_list);
+       elem != list_end(&thread_current()->child_list);
+       elem = list_next(elem))
+  {
 
     child = list_entry(elem, struct thread, child_elem);
 
-    if(child->tid == pid) {
+    if (child->tid == pid)
+    {
       sema_down(&child->load_sema);
 
-      if(child->loaded)
+      if (child->loaded)
         return pid;
       else
         return -1;

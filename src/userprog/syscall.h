@@ -1,11 +1,10 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
-
-#define pid_t struct intr_frame *
 #define bool _Bool
 
-void syscall_init(void);
+typedef int pid_t;
 
+void syscall_init(void);
 void halt(void);
 void exit(int status);
 pid_t exec(const char *cmd_line);
