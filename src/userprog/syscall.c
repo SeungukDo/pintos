@@ -141,14 +141,23 @@ int wait(pid_t pid)
 }
 
 bool create (const char *file, unsigned initial_size) {
+  if (file == NULL) {
+      exit(-1);
+  }
   return filesys_create(file, initial_size);
 }
 
 bool remove (const char *file) {
+  if (file == NULL) {
+      exit(-1);
+  }
   return filesys_remove(file);
 }
 
 int open (const char *file) {
+  if (file == NULL) {
+      exit(-1);
+  }
   int i;
   struct file* fp = filesys_open(file);
   if (fp == NULL) {
@@ -165,46 +174,73 @@ int open (const char *file) {
 }
 
 int filesize (int fd) {
+  if (thread_current()->fd[fd] == NULL) {
+      exit(-1);
+  }
   return file_length(thread_current()->fd[fd]);
 }
 
 int read(int fd, void *buffer, unsigned size)
 {
   int i;
-  if (fd == 0)
-  {
-    for (i = 0; i < size; i++)
-    {
-      if (((char *)buffer)[i] == '\0')
-      {
+  check_address(buffer);
+  if (fd == 0) {
+    for (i = 0; i < size; i ++) {
+      if (((char *)buffer)[i] == '\0') {
         break;
       }
     }
+  } 
+  else if (fd > 2) {
+    if (thread_current()->fd[fd] == NULL) {
+      exit(-1);
+    }
+    return file_read(thread_current()->fd[fd], buffer, size);
   }
   return i;
 }
 
 int write(int fd, const void *buffer, unsigned size)
 {
-
-  if (fd == 1)
+  check_address(buffer);
+  if (fd == 1) 
   {
     putbuf(buffer, size);
     return size;
+  } 
+  else if (fd > 2) {
+    if (thread_current()->fd[fd] == NULL) {
+      exit(-1);
+    }
+    return file_write(thread_current()->fd[fd], buffer, size);
   }
   return -1;
 }
 
 void seek (int fd, unsigned position) {
+  if (thread_current()->fd[fd] == NULL) 
+  {
+    exit(-1);
+  }
   file_seek(thread_current()->fd[fd], position);
 }
 
 unsigned tell (int fd) {
+  if (thread_current()->fd[fd] == NULL) {
+    exit(-1);
+  }
   return file_tell(thread_current()->fd[fd]);
 }
 
 void close (int fd) {
-  return file_close(thread_current()->fd[fd]);
+  struct file* fp;
+  if (thread_current()->fd[fd] == NULL) 
+  {
+    exit(-1);
+  }
+  fp = thread_current()->fd[fd];
+  thread_current()->fd[fd] = NULL;
+  return file_close(fp);
 }
 
 void check_address(void *addr)
