@@ -38,12 +38,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     break;
   case SYS_WAIT:
     check_address(esp + 4);
-<<<<<<< HEAD
-    f->eax = wait((pid_t) * (uint32_t *)(esp + 4));
-    //printf("SYS_WAIT");
-=======
     wait((pid_t) * (uint32_t *)(esp + 4));
->>>>>>> Yujin
     break;
   case SYS_CREATE:
     check_address(esp + 4);
@@ -66,15 +61,6 @@ syscall_handler(struct intr_frame *f UNUSED)
     check_address(esp + 4);
     check_address(esp + 8);
     check_address(esp + 12);
-<<<<<<< HEAD
-    read((int)*(uint32_t *)(esp + 4), (void *)*(uint32_t *)(esp + 8), (unsigned)*((uint32_t *)(esp + 12)));
-    break;
-  case SYS_WRITE:
-    write((int)*(uint32_t *)(esp + 4),
-          (void *)*(uint32_t *)(f->esp + 8),
-          (unsigned)*((uint32_t *)(f->esp + 12)));
-    //printf("SYS_WRITE");
-=======
     read((int)*(uint32_t *)(esp + 20), (void *)*(uint32_t *)(esp + 24), (unsigned)*((uint32_t *)(esp + 28)));
     break;
   case SYS_WRITE:
@@ -84,7 +70,6 @@ syscall_handler(struct intr_frame *f UNUSED)
     write((int)*(uint32_t *)(esp+4), 
     (void *)*(uint32_t *)(f->esp + 8), 
     (unsigned)*((uint32_t *)(f->esp + 12)));
->>>>>>> Yujin
     break;
   case SYS_SEEK:
     check_address(esp + 4);
@@ -112,12 +97,8 @@ void halt(void)
 
 void exit(int status)
 {
-<<<<<<< HEAD
-  printf("%s: exit(%d)\n", thread_current()->name, status);
-=======
   int i;
 	printf("%s: exit(%d)\n", thread_current()->name, status);
->>>>>>> Yujin
   thread_current()->exit_status = status;
   for (i = 3; i < 128; i++) {
       if (thread_current()->fd[i] != NULL) {
