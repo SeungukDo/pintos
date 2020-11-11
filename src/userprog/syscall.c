@@ -82,21 +82,6 @@ syscall_handler(struct intr_frame *f UNUSED)
   }
 }
 
-void
-get_argument(void *esp, int *arg, int count)
-{
-	int i;
-	void *stack_pointer=esp+4;
-	if(count > 0)
-	{
-		for(i=0; i<count; i++){
-			check_address(stack_pointer);
-			arg[i] = *(int *)stack_pointer;
-			stack_pointer = stack_pointer + 4;
-		}
-	}
-}
-
 void halt(void)
 {
   shutdown_power_off();
