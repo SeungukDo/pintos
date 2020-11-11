@@ -61,7 +61,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     check_address(esp + 4);
     check_address(esp + 8);
     check_address(esp + 12);
-    read((int)*(uint32_t *)(esp + 20), (void *)*(uint32_t *)(esp + 24), (unsigned)*((uint32_t *)(esp + 28)));
+    read((int)*(uint32_t *)(esp + 4), (void *)*(uint32_t *)(esp + 8), (unsigned)*((uint32_t *)(esp + 12)));
     break;
   case SYS_WRITE:
     check_address(esp + 4);
