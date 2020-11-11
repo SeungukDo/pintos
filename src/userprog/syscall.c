@@ -7,7 +7,7 @@
 
 static void syscall_handler(struct intr_frame *f UNUSED);
 
-void check_address(void *addr);
+int check_address(void *addr);
 void get_argument(void *esp, int *arg, int count);
 
 void syscall_init(void)
@@ -20,66 +20,84 @@ syscall_handler(struct intr_frame *f UNUSED)
 {
   void *esp = f->esp;
   int number = *(int *)esp;
-  check_address((void *)esp);
+  if (check_address((void *)esp)) exit(-1);
   switch (number)
   {
   case SYS_HALT:
     halt();
     break;
   case SYS_EXIT:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     exit(*(uint32_t *)(esp + 4));
     break;
   case SYS_EXEC:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     f->eax = exec((const char *)*(uint32_t *)(esp + 4));
     break;
   case SYS_WAIT:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     wait((pid_t) * (uint32_t *)(esp + 4));
     break;
   case SYS_CREATE:
-    check_address(esp + 4);
-    check_address(esp + 8);
+    if(check_address(esp + 4))
+      exit(-1);
+    if(check_address(esp + 8))
+      exit(-1);
     f->eax = create((const char *)*(uint32_t *)(esp + 4), (unsigned)*(uint32_t *)(esp + 8));
     break;
   case SYS_REMOVE:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     f->eax = remove((const char*)*(uint32_t *)(esp + 4));
     break;
   case SYS_OPEN:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     f->eax = open((const char*)*(uint32_t *)(esp + 4));
     break;
   case SYS_FILESIZE:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     f->eax = filesize((int)*(uint32_t *)(esp + 4));
     break;
   case SYS_READ:
-    check_address(esp + 4);
-    check_address(esp + 8);
-    check_address(esp + 12);
-    read((int)*(uint32_t *)(esp + 4), (void *)*(uint32_t *)(esp + 8), (unsigned)*((uint32_t *)(esp + 12)));
+    if(check_address(esp + 4))
+      exit(-1);
+    if(check_address(esp + 8))
+      exit(-1);
+    if(check_address(esp + 12))
+      exit(-1);
+    f->eax = read((int)*(uint32_t *)(esp + 4), (void *)*(uint32_t *)(esp + 8), (unsigned)*((uint32_t *)(esp + 12)));
     break;
   case SYS_WRITE:
-    check_address(esp + 4);
-    check_address(esp + 8);
-    check_address(esp + 12);
-    write((int)*(uint32_t *)(esp+4), 
+    if(check_address(esp + 4))
+      exit(-1);
+    if(check_address(esp + 8))
+      exit(-1);
+    if(check_address(esp + 12))
+      exit(-1);
+    f->eax = write((int)*(uint32_t *)(esp+4), 
     (void *)*(uint32_t *)(f->esp + 8), 
     (unsigned)*((uint32_t *)(f->esp + 12)));
     break;
   case SYS_SEEK:
-    check_address(esp + 4);
-    check_address(esp + 8);
+    if(check_address(esp + 4))
+      exit(-1);
+    if(check_address(esp + 8))
+      exit(-1);
     seek((int)*(uint32_t *)(esp + 4), (unsigned)*(uint32_t *)(esp + 8));
     break;
   case SYS_TELL:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     f->eax = tell((int)*(uint32_t *)(esp + 4));
     break;
   case SYS_CLOSE:
-    check_address(esp + 4);
+    if(check_address(esp + 4))
+      exit(-1);
     close((int)*(uint32_t *)(esp + 4));
     break;
 
@@ -241,14 +259,15 @@ void close (int fd) {
   return file_close(fp);
 }
 
-void check_address(void *addr)
+int check_address(void *addr)
 {
   if (addr >= 0xc0000000 || addr <= 0x8048000)
   {
-    exit(-1);
+    return 1;
   }
   else
   {
-    return;
+    return 0;
   }
+  
 }
