@@ -43,9 +43,10 @@ tid_t process_execute(const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create(name, PRI_DEFAULT, start_process, fn_copy);
-  //sema_down(&(thread_current()->until_sema));
+
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
+
   return tid;
 }
 
@@ -173,7 +174,7 @@ int process_wait(tid_t child_tid UNUSED)
     //printf("tid: %d\n", child_tid);
   }
 
-  //palloc_free_page(child);
+  palloc_free_page(child);
   return -1;
 }
 
