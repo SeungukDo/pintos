@@ -42,7 +42,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_WAIT:
     if (check_address(esp + 4))
       exit(-1);
-    f->eax = wait((pid_t) * (uint32_t *)(esp + 4));
+    f->eax = wait((tid_t) * (uint32_t *)(esp + 4));
     break;
   case SYS_CREATE:
     if (check_address(esp + 4))
@@ -130,9 +130,9 @@ void exit(int status)
   thread_exit();
 }
 
-pid_t exec(const char *cmd_line)
+tid_t exec(const char *cmd_line)
 {
-  pid_t pid = process_execute(cmd_line);
+  tid_t tid = process_execute(cmd_line);
   struct thread *child;
 
   struct list_elem *elem;
@@ -140,15 +140,14 @@ pid_t exec(const char *cmd_line)
        elem != list_end(&thread_current()->child_list);
        elem = list_next(elem))
   {
-
     child = list_entry(elem, struct thread, child_elem);
 
-    if (child->tid == pid)
+    if (child->tid == tid)
     {
       sema_down(&child->load_sema);
-
-      if (child->loaded)
-        return pid;
+      int is_loaded = child->loaded;
+      if (is_loaded)
+        return tid;
       else
         return -1;
     }
@@ -156,9 +155,9 @@ pid_t exec(const char *cmd_line)
   return -1;
 }
 
-int wait(pid_t pid)
+int wait(tid_t tid)
 {
-  return process_wait(pid);
+  return process_wait(tid);
 }
 
 bool create(const char *file, unsigned initial_size)

@@ -159,19 +159,21 @@ int process_wait(tid_t child_tid UNUSED)
        elem != list_end(&thread_current()->child_list);
        elem = list_next(elem))
   {
-
     if (list_entry(elem, struct thread, child_elem)->tid == child_tid)
+    {
       child = list_entry(elem, struct thread, child_elem);
+      sema_down(&child->exit_sema);
+      int status = child->exit_status;
+      list_remove(&(child->child_elem));
+      sema_up(&child->mem_sema);
+      return status;
+    }
+    //printf("%s 's pid: %d\n", list_entry(elem, struct thread, child_elem)->name, list_entry(elem, struct thread, child_elem)->tid);
+    //printf("tid: %d\n", child_tid);
   }
 
-  if (child == NULL)
-    return -1;
-  //printf("\n\n%s\n\n", child->name);
-
-  sema_down(&child->exit_sema);
-  int status = child->exit_status;
   //palloc_free_page(child);
-  return status;
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -196,6 +198,8 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
+  sema_up(&thread_current()->exit_sema);
+  sema_down(&thread_current()->mem_sema);
 }
 
 /* Sets up the CPU for running user code in the current
