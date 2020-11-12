@@ -119,7 +119,6 @@ start_process(void *file_name_)
       if_.esp -= 4;
       *(int *)if_.esp = 0;
     }
-    thread_current()->loaded = true;
   }
 
   sema_up(&thread_current()->load_sema);
@@ -167,10 +166,12 @@ int process_wait(tid_t child_tid UNUSED)
 
   if (child == NULL)
     return -1;
+  //printf("\n\n%s\n\n", child->name);
+
   sema_down(&child->exit_sema);
-  //list_remove(&child->child_elem);
+  int status = child->exit_status;
   //palloc_free_page(child);
-  return child->exit_status;
+  return status;
 }
 
 /* Free the current process's resources. */
