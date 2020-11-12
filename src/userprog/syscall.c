@@ -48,45 +48,48 @@ syscall_handler(struct intr_frame *f UNUSED)
     wait((pid_t) * (uint32_t *)(esp + 4));
     break;
   case SYS_CREATE:
-    //printf("\nSYS_CREATE\n");
+    check_address(esp + 4);
+    check_address(esp + 8);
+    f->eax = create((const char *)*(uint32_t *)(esp + 4), (unsigned)*(uint32_t *)(esp + 8));
     break;
   case SYS_REMOVE:
-    //printf("\nSYS_REMOVE\n");
+    check_address(esp + 4);
+    f->eax = remove((const char*)*(uint32_t *)(esp + 4));
     break;
   case SYS_OPEN:
-    //printf("\nSYS_OPEN\n");
+    check_address(esp + 4);
+    f->eax = open((const char*)*(uint32_t *)(esp + 4));
     break;
   case SYS_FILESIZE:
-    //printf("\nSYS_FILESIZE\n");
+    check_address(esp + 4);
+    f->eax = filesize((int)*(uint32_t *)(esp + 4));
     break;
   case SYS_READ:
-    //printf("\nSYS_READ\n");
-
     check_address(esp + 4);
     check_address(esp + 8);
     check_address(esp + 12);
-    read((int)*(uint32_t *)(esp + 4),
-    (void *)*(uint32_t *)(esp + 8),
-    (unsigned)*((uint32_t *)(esp + 12)));
+    read((int)*(uint32_t *)(esp + 20), (void *)*(uint32_t *)(esp + 24), (unsigned)*((uint32_t *)(esp + 28)));
     break;
   case SYS_WRITE:
-    //hex_dump(f->esp, f->esp, 100, 1);
-
     check_address(esp + 4);
     check_address(esp + 8);
     check_address(esp + 12);
-    write((int)*(uint32_t *)(f->esp + 4), 
+    write((int)*(uint32_t *)(esp+4), 
     (void *)*(uint32_t *)(f->esp + 8), 
     (unsigned)*((uint32_t *)(f->esp + 12)));
     break;
   case SYS_SEEK:
-    //printf("SYS_SEEK");
+    check_address(esp + 4);
+    check_address(esp + 8);
+    seek((int)*(uint32_t *)(esp + 4), (unsigned)*(uint32_t *)(esp + 8));
     break;
   case SYS_TELL:
-    //printf("SYS_TELL");
+    check_address(esp + 4);
+    f->eax = tell((int)*(uint32_t *)(esp + 4));
     break;
   case SYS_CLOSE:
-    //printf("SYS_CLOSE");
+    check_address(esp + 4);
+    close((int)*(uint32_t *)(esp + 4));
     break;
 
   default:
@@ -101,8 +104,15 @@ void halt(void)
 
 void exit(int status)
 {
+  int i;
 	printf("%s: exit(%d)\n", thread_current()->name, status);
   thread_current()->exit_status = status;
+  for (i = 3; i < 128; i++) {
+      if (thread_current()->fd[i] != NULL) {
+          close(i);
+      }   
+  }   
+
   thread_exit();
 }
 
@@ -135,6 +145,34 @@ int wait(pid_t pid)
   return process_wait(pid);
 }
 
+bool create (const char *file, unsigned initial_size) {
+  return filesys_create(file, initial_size);
+}
+
+bool remove (const char *file) {
+  return filesys_remove(file);
+}
+
+int open (const char *file) {
+  int i;
+  struct file* fp = filesys_open(file);
+  if (fp == NULL) {
+      return -1; 
+  } else {
+    for (i = 3; i < 128; i++) {
+      if (thread_current()->fd[i] == NULL) {
+        thread_current()->fd[i] = fp; 
+        return i;
+      }   
+    }   
+  }
+  return -1; 
+}
+
+int filesize (int fd) {
+  return file_length(thread_current()->fd[fd]);
+}
+
 int read(int fd, void *buffer, unsigned size)
 {
   int i;
@@ -159,6 +197,18 @@ int write(int fd, const void *buffer, unsigned size)
     return size;
   }
   return -1;
+}
+
+void seek (int fd, unsigned position) {
+  file_seek(thread_current()->fd[fd], position);
+}
+
+unsigned tell (int fd) {
+  return file_tell(thread_current()->fd[fd]);
+}
+
+void close (int fd) {
+  return file_close(thread_current()->fd[fd]);
 }
 
 void check_address(void *addr)
