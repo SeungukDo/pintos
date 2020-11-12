@@ -43,6 +43,7 @@ tid_t process_execute(const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create(name, PRI_DEFAULT, start_process, fn_copy);
+  //sema_down(&(thread_current()->until_sema));
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
   return tid;
@@ -121,10 +122,10 @@ start_process(void *file_name_)
     }
   }
 
-  sema_up(&thread_current()->load_sema);
-
   /* If load failed, quit. */
   palloc_free_page(file_name);
+  sema_up(&thread_current()->load_sema);
+  //sema_up(&(thread_current()->parent->until_sema));
   if (!success)
     thread_exit();
 
