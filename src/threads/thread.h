@@ -15,7 +15,6 @@ enum thread_status
    THREAD_DYING    /* About to be destroyed. */
 };
 
-
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -105,9 +104,9 @@ struct thread
    struct lock *waiting_lock;
    struct list child_list;
    struct list_elem child_elem;
-   struct thread* parent;
    struct semaphore load_sema;
    struct semaphore exit_sema;
+   struct semaphore stat_sema;
    int exit_status;
    bool loaded;
    int nice;
