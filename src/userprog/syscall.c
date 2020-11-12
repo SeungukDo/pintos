@@ -197,6 +197,10 @@ int open(const char *file)
     {
       if (thread_current()->fd[i] == NULL)
       {
+        if (strcmp(thread_current()->name, file) == 0)
+        {
+          file_deny_write(fp);
+        }
         thread_current()->fd[i] = fp;
         return i;
       }
@@ -258,6 +262,10 @@ int write(int fd, const void *buffer, unsigned size)
     if (thread_current()->fd[fd] == NULL)
     {
       exit(-1);
+    }
+    if (thread_current()->fd[fd]->deny_write)
+    {
+      file_deny_write(thread_current()->fd[fd]);
     }
     return file_write(thread_current()->fd[fd], buffer, size);
   }
