@@ -119,6 +119,7 @@ start_process(void *file_name_)
       if_.esp -= 4;
       *(int *)if_.esp = 0;
     }
+    thread_current()->loaded = true;
   }
 
   sema_up(&thread_current()->load_sema);
@@ -154,22 +155,22 @@ int process_wait(tid_t child_tid UNUSED)
 {
   struct thread *child = NULL;
   struct list_elem *elem;
+  int status=0;
 
   for (elem = list_begin(&thread_current()->child_list);
        elem != list_end(&thread_current()->child_list);
        elem = list_next(elem))
   {
 
-    if (list_entry(elem, struct thread, child_elem)->tid == child_tid)
+    if (list_entry(elem, struct thread, child_elem)->tid == child_tid){
       child = list_entry(elem, struct thread, child_elem);
+    }
   }
 
   if (child == NULL)
     return -1;
-  //printf("\n\n%s\n\n", child->name);
-
   sema_down(&child->exit_sema);
-  int status = child->exit_status;
+  //list_remove(&child->child_elem);
   //palloc_free_page(child);
   return status;
 }
