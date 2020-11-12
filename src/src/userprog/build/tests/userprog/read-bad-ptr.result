@@ -1,7 +1,0 @@
-FAIL
-Kernel panic in run: PANIC at ../../lib/kernel/list.c:361 in find_end_of_run(): assertion `a != NULL' failed.
-Call stack: 0xc002a816 0x646e655f
-Translation of call stack:
-In kernel.o:
-0xc002a816: debug_panic (.../../lib/kernel/debug.c:35)
-0x646e655f: (unknown)

@@ -107,6 +107,7 @@ struct thread
    struct semaphore load_sema;
    struct semaphore exit_sema;
    struct semaphore mem_sema;
+   struct semaphore until_sema;
    int exit_status;
    bool loaded;
    int nice;
@@ -116,6 +117,7 @@ struct thread
    /* Owned by userprog/process.c. */
    uint32_t *pagedir; /* Page directory. */
    struct file *fd[128];
+   struct thread *parent;
 #endif
 
    /* Owned by thread.c. */

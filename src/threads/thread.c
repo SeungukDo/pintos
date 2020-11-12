@@ -206,10 +206,13 @@ tid_t thread_create(const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-  list_push_back(&(thread_current()->child_list), &(t->child_elem));
+  list_push_back(&(running_thread()->child_list), &(t->child_elem));
   sema_init(&t->load_sema, 0);
   sema_init(&t->exit_sema, 0);
   sema_init(&t->mem_sema, 0);
+  sema_init(&t->until_sema, 0);
+  t->parent = running_thread();
+  list_init(&(t->child_list));
 
   /* Add to run queue. */
 
@@ -316,7 +319,7 @@ void thread_exit(void)
     sema_up(&thread_current()->exit_sema);
 
   thread_current()->status = THREAD_DYING;
-
+  //sema_up(&thread_current()->until_sema);
   schedule();
   NOT_REACHED();
 }
