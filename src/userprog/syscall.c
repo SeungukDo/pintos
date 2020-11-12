@@ -14,58 +14,70 @@ void syscall_init(void)
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+struct lock file_lock;
+
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
   void *esp = f->esp;
   int number = *(int *)esp;
-  printf("syscall %d\n", number);
+  //printf("\nsyscall %d\n", number);
+  //hex_dump(f->esp, f->esp, 100, 1);
   switch (number)
   {
   case SYS_HALT:
-    //printf("SYS HALT");
+    //printf("\nSYS HALT\n");
     halt();
     break;
   case SYS_EXIT:
+    //printf("\nSYS_EXIT\n");
+
     check_address(esp + 4);
     exit(*(uint32_t *)(esp + 4));
-    //printf("SYS_EXIT");
     break;
   case SYS_EXEC:
+    //printf("\nSYS_EXEC\n");
+
     check_address(esp + 4);
     exec((const char *)*(uint32_t *)(esp + 4));
-    //printf("SYS_EXEC");
     break;
   case SYS_WAIT:
+    //printf("\nSYS_WAIT\n");
+
     check_address(esp + 4);
     wait((pid_t) * (uint32_t *)(esp + 4));
-    //printf("SYS_WAIT");
     break;
   case SYS_CREATE:
-    //printf("SYS_CREATE");
+    //printf("\nSYS_CREATE\n");
     break;
   case SYS_REMOVE:
-    //printf("SYS_REMOVE");
+    //printf("\nSYS_REMOVE\n");
     break;
   case SYS_OPEN:
-    //printf("SYS_OPEN");
+    //printf("\nSYS_OPEN\n");
     break;
   case SYS_FILESIZE:
-    //printf("SYS_FILESIZE");
+    //printf("\nSYS_FILESIZE\n");
     break;
   case SYS_READ:
-    //check_address(esp + 20);
-    //check_address(esp + 24);
-    //check_address(esp + 28);
-    //read((int)*(uint32_t *)(esp + 20), (void *)*(uint32_t *)(esp + 24), (unsigned)*((uint32_t *)(esp + 28)));
-    //printf("SYS_READ");
+    //printf("\nSYS_READ\n");
+
+    check_address(esp + 4);
+    check_address(esp + 8);
+    check_address(esp + 12);
+    read((int)*(uint32_t *)(esp + 4),
+    (void *)*(uint32_t *)(esp + 8),
+    (unsigned)*((uint32_t *)(esp + 12)));
     break;
   case SYS_WRITE:
-    hex_dump(f->esp, f->esp, 100, 1);
-    write((int)*(uint32_t *)(esp+4), 
+    //hex_dump(f->esp, f->esp, 100, 1);
+
+    check_address(esp + 4);
+    check_address(esp + 8);
+    check_address(esp + 12);
+    write((int)*(uint32_t *)(f->esp + 4), 
     (void *)*(uint32_t *)(f->esp + 8), 
     (unsigned)*((uint32_t *)(f->esp + 12)));
-    //printf("SYS_WRITE");
     break;
   case SYS_SEEK:
     //printf("SYS_SEEK");
@@ -141,10 +153,9 @@ int read(int fd, void *buffer, unsigned size)
 
 int write(int fd, const void *buffer, unsigned size)
 {
-
   if (fd == 1)
   {
-    putbuf(buffer, size);
+    putbuf((const char*)buffer, size);
     return size;
   }
   return -1;
@@ -152,9 +163,12 @@ int write(int fd, const void *buffer, unsigned size)
 
 void check_address(void *addr)
 {
-  return;
-  if (!is_user_vaddr(addr))
-  {
-    exit(-1);
+  if((unsigned int)addr >= 0x8048000){
+    if((unsigned int)addr < 0xc0000000){
+      return;
+    }
   }
+	else{
+		exit(-1);
+	}
 }
