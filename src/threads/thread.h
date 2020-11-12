@@ -106,16 +106,18 @@ struct thread
    struct list_elem child_elem;
    struct semaphore load_sema;
    struct semaphore exit_sema;
+   struct semaphore mem_sema;
    struct semaphore stat_sema;
+   struct thread* parent;
    int exit_status;
    bool loaded;
    int nice;
    int recent_cpu;
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
-    struct file* fd[128];
+   /* Owned by userprog/process.c. */
+   uint32_t *pagedir; /* Page directory. */
+   struct file *fd[128];
 #endif
 
    /* Owned by thread.c. */

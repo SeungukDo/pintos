@@ -43,8 +43,17 @@ tid_t process_execute(const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create(name, PRI_DEFAULT, start_process, fn_copy);
+  sema_down(&(thread_current()->stat_sema));
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
+  for (struct list_elem* elem = list_begin(&thread_current()->child_list);
+        elem != list_end(&thread_current()->child_list);
+        elem = list_next(elem)) {
+      struct thread* t = list_entry(elem, struct thread, child_elem);
+      if (t->exit_status == -1) {
+        return process_wait(tid);
+      }
+  }
   return tid;
 }
 
@@ -121,10 +130,10 @@ start_process(void *file_name_)
     }
   }
 
-  sema_up(&thread_current()->load_sema);
-
   /* If load failed, quit. */
   palloc_free_page(file_name);
+  sema_up(&thread_current()->load_sema);
+  sema_up(&thread_current()->parent->stat_sema);
   if (!success)
     thread_exit();
 
@@ -159,20 +168,23 @@ int process_wait(tid_t child_tid UNUSED)
        elem != list_end(&thread_current()->child_list);
        elem = list_next(elem))
   {
-
     if (list_entry(elem, struct thread, child_elem)->tid == child_tid)
+    {
       child = list_entry(elem, struct thread, child_elem);
+      sema_down(&child->exit_sema);
+      int status = child->exit_status;
+      list_remove(&(child->child_elem));
+      
+      //sema_up(&child->stat_sema);
+      sema_up(&child->mem_sema);
+      return status;
+    }
+    //printf("%s 's pid: %d\n", list_entry(elem, struct thread, child_elem)->name, list_entry(elem, struct thread, child_elem)->tid);
+    //printf("tid: %d\n", child_tid);
   }
 
-  if (child == NULL)
-    return -1;
-  //printf("\n\n%s\n\n", child->name);
-
-  sema_down(&child->exit_sema);
-  int status = child->exit_status;
-  sema_up(&child->stat_sema);
   //palloc_free_page(child);
-  return status;
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -197,6 +209,8 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
+  sema_up(&thread_current()->exit_sema);
+  sema_down(&thread_current()->mem_sema);
 }
 
 /* Sets up the CPU for running user code in the current
